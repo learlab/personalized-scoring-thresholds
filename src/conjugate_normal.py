@@ -4,7 +4,7 @@ from scipy import stats
 import numpy.typing as npt
 
 class conjugate_normal():
-    def __init__(self, mu, k, a, b, percentile=.40):
+    def __init__(self, mu, k, a, b, percentile=.20):
         '''
         mu: prior mean
         k: uncertainty about the prior mean (pseudo-samples)
@@ -50,8 +50,14 @@ class conjugate_normal():
         return np.sqrt(self.beta / (self.alpha - 1))
 
     @property
+    def dist(self):
+        df = 2 * self.alpha
+        scale = np.sqrt(self.beta * (1 + 1 / self.k) / self.alpha)
+        return stats.t(df=df, loc=self.mu, scale=scale)
+
+    @property
     def threshold(self):
-        return stats.norm.ppf(self.percentile, loc=self.mu, scale=self.sigma)
+        return self.dist.ppf(self.percentile)
 
     def sum_square_diffs(self, A, B):
         '''Sum of squared differences'''
@@ -59,13 +65,12 @@ class conjugate_normal():
         return np.sum(squared_differences)
 
     def plot(self, u=3.0, draw_percentile=True, color="blue", **kwargs):
-        dist = stats.norm(self.mu, self.sigma)
-        plt.plot(self.xlim, dist.pdf(self.xlim), color=color, **kwargs)
+        plt.plot(self.xlim, self.dist.pdf(self.xlim), color=color, **kwargs)
 
         # Add percentile indicator
         if draw_percentile:
             plt.axvline(
-                ppf,
+                self.threshold,
                 color=color,
                 linestyle="--",
                 label=f'{int(self.percentile*100):2d}th Percentile: {self.threshold:.2f}'
