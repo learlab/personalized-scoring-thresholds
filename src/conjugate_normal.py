@@ -19,13 +19,14 @@ class conjugate_normal():
         self.xlim = np.linspace(self.mu - 3*self.sigma, self.mu + 3*self.sigma, 1001) # For plotting
         self.percentile = percentile
 
-    def update(self, x: npt.ArrayLike):
+    def update(self, x: npt.ArrayLike, increment_k=True):
         '''x: data
         '''
         self.mu = self.posterior_mean(x)
         self.alpha = self.posterior_alpha(x)
         self.beta = self.posterior_beta(x)
-        self.k += len(x)
+        if increment_k:
+            self.k += len(x)
         
     def posterior_mean(self, x):
         n = len(x)
@@ -55,9 +56,15 @@ class conjugate_normal():
         scale = np.sqrt(self.beta * (1 + 1 / self.k) / self.alpha)
         return stats.t(df=df, loc=self.mu, scale=scale)
 
+    # @property
+    # def threshold(self):
+    #     return self.dist.ppf(self.percentile)
+
     @property
     def threshold(self):
-        return self.dist.ppf(self.percentile)
+        df = 2 * self.alpha
+        scale = np.sqrt(self.beta * (1 + 1 / self.k) / self.alpha)
+        return stats.t.ppf(self.percentile, df=df, loc=self.mu, scale=scale)
 
     def sum_square_diffs(self, A, B):
         '''Sum of squared differences'''
