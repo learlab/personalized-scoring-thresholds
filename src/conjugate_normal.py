@@ -19,6 +19,18 @@ class conjugate_normal():
         self.xlim = np.linspace(self.mu - 3*self.sigma, self.mu + 3*self.sigma, 1001) # For plotting
         self.percentile = percentile
 
+    def __repr__(self):
+        return (
+            f"ConjugateNormal("
+            f"mu={self.mu:}, "
+            f"k={self.k}, "
+            f"alpha={self.alpha}, "
+            f"beta={self.beta:}, "
+            f"percentile={self.percentile:.2f}, "
+            f"sigma={self.sigma:.4f}, "
+            f"threshold={self.threshold:.4f})"
+        )
+
     def update(self, x: npt.ArrayLike, increment_k=True):
         '''x: data
         '''
@@ -68,8 +80,7 @@ class conjugate_normal():
 
     def sum_square_diffs(self, A, B):
         '''Sum of squared differences'''
-        squared_differences = (A - B) ** 2
-        return np.sum(squared_differences)
+        return np.sum((A - B) ** 2)
 
     def plot(self, u=3.0, draw_percentile=True, color="blue", **kwargs):
         plt.plot(self.xlim, self.dist.pdf(self.xlim), color=color, **kwargs)
