@@ -68,10 +68,6 @@ class conjugate_normal():
         scale = np.sqrt(self.beta * (1 + 1 / self.k) / self.alpha)
         return stats.t(df=df, loc=self.mu, scale=scale)
 
-    # @property
-    # def threshold(self):
-    #     return self.dist.ppf(self.percentile)
-
     @property
     def threshold(self):
         df = 2 * self.alpha
