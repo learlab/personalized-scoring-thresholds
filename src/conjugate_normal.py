@@ -4,7 +4,7 @@ from scipy import stats
 import numpy.typing as npt
 
 class conjugate_normal():
-    def __init__(self, mu, k, a, b, percentile=.20):
+    def __init__(self, mu, k, a, b, percentile=.20, max_k=None, max_alpha=None, k_decay=None, alpha_decay=None, beta_decay=None):
         '''
         mu: prior mean
         k: uncertainty about the prior mean (pseudo-samples)
@@ -14,9 +14,13 @@ class conjugate_normal():
         '''
         self.mu = mu
         self.k = k
+        self.max_k = np.inf if not max_k else max_k
         self.alpha = a
+        self.max_alpha = max_alpha
+        self.k_decay = k_decay
+        self.alpha_decay = alpha_decay
+        self.beta_decay = beta_decay
         self.beta = b
-        self.xlim = np.linspace(self.mu - 3*self.sigma, self.mu + 3*self.sigma, 1001) # For plotting
         self.percentile = percentile
 
     def __repr__(self):
@@ -31,14 +35,36 @@ class conjugate_normal():
             f"threshold={self.threshold:.4f})"
         )
 
-    def update(self, x: npt.ArrayLike, increment_k=True):
+    def _apply_constraints(self):
+        '''Apply constraints to prevent over-confidence'''
+        if self.max_k:
+            self.k = min(self.k, self.max_k)
+        # Also bound alpha to prevent variance estimate from becoming too precise
+        if self.max_alpha:
+            self.alpha = min(self.alpha, self.max_alpha)
+
+    def _apply_forgetting(self):
+        '''Apply the forgetting strategy'''
+        # Exponentially decay parameters
+        if self.k_decay:
+            self.k *= self.k_decay
+        if self.alpha_decay:
+            self.alpha = 1 + (self.alpha - 1) * self.alpha_decay
+        if self.beta_decay:
+            self.beta *= self.beta_decay
+
+    def update(self, x: npt.ArrayLike):
         '''x: data
         '''
+        self._apply_forgetting()
+
         self.mu = self.posterior_mean(x)
         self.alpha = self.posterior_alpha(x)
         self.beta = self.posterior_beta(x)
-        if increment_k:
-            self.k += len(x)
+        self.k += len(x)
+
+        # Apply post-update constraints
+        self._apply_constraints()
         
     def posterior_mean(self, x):
         n = len(x)
@@ -77,15 +103,3 @@ class conjugate_normal():
     def sum_square_diffs(self, A, B):
         '''Sum of squared differences'''
         return np.sum((A - B) ** 2)
-
-    def plot(self, u=3.0, draw_percentile=True, color="blue", **kwargs):
-        plt.plot(self.xlim, self.dist.pdf(self.xlim), color=color, **kwargs)
-
-        # Add percentile indicator
-        if draw_percentile:
-            plt.axvline(
-                self.threshold,
-                color=color,
-                linestyle="--",
-                label=f'{int(self.percentile*100):2d}th Percentile: {self.threshold:.2f}'
-            )
